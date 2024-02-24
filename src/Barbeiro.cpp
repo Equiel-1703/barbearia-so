@@ -1,24 +1,20 @@
 #include "Barbeiro.h"
 
-Barbeiro::Barbeiro()
+// Declarando variavel atomica
+std::atomic<bool> Barbeiro::terminate_barbeiros_threads(false);
+
+// Declarando mutex e cond
+pthread_mutex_t Barbeiro::mutex_fila_clientes = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t Barbeiro::cond_tem_cliente = PTHREAD_COND_INITIALIZER;
+
+Barbeiro::Barbeiro(LinkedList<Cliente *> *clientes_antender, GerenciadorFerramentas *gerenciador_ferramentas)
 {
-    pthread_mutex_init(&mutex_chegou_cliente, NULL);
-    pthread_mutex_init(&mutex_libera_cliente, NULL);
+    this->clientes_antender = clientes_antender;
 
-    // Lock
-    pthread_mutex_lock(&mutex_chegou_cliente);
-    pthread_mutex_lock(&mutex_libera_cliente);
+    this->gerenciador_ferramentas = gerenciador_ferramentas;
 
-    // Create thread
+    // Iniciar thread
     pthread_create(&this->tid, NULL, run, (void *)this);
-}
-
-Barbeiro::Barbeiro(Barbeiro &b)
-{
-    this->tid = b.getTid();
-    this->tid_cliente = b.getTidCliente();
-    this->mutex_libera_cliente = *b.getLiberaClienteMutex();
-    this->mutex_chegou_cliente = *b.getChegouClienteMutex();
 }
 
 Barbeiro::~Barbeiro()
@@ -26,9 +22,8 @@ Barbeiro::~Barbeiro()
     // Destroy thread
     pthread_cancel(this->getTid());
 
-    // Destroy mutexes
-    pthread_mutex_destroy(&mutex_libera_cliente);
-    pthread_mutex_destroy(&mutex_chegou_cliente);
+    // Destroy mutex da fila
+    pthread_mutex_destroy(&this->mutex_fila_clientes);
 }
 
 pthread_t Barbeiro::getTid() const
@@ -36,56 +31,67 @@ pthread_t Barbeiro::getTid() const
     return this->tid;
 }
 
-pthread_mutex_t *Barbeiro::getLiberaClienteMutex() const
+// Get mutex_fila_clientes
+pthread_mutex_t *Barbeiro::getFilaClientesMutex()
 {
-    return (pthread_mutex_t *)&this->mutex_libera_cliente;
+    return &Barbeiro::mutex_fila_clientes;
 }
 
-pthread_mutex_t *Barbeiro::getChegouClienteMutex() const
+// Get cond_tem_cliente
+pthread_cond_t *Barbeiro::getCondTemCliente()
 {
-    return (pthread_mutex_t *)&this->mutex_chegou_cliente;
+    return &Barbeiro::cond_tem_cliente;
 }
 
-pthread_t Barbeiro::getTidCliente() const
+void Barbeiro::terminateBarbeirosThreads()
 {
-    return this->tid_cliente;
-}
-
-void Barbeiro::setTidCliente(pthread_t tid)
-{
-    this->tid_cliente = tid;
+    terminate_barbeiros_threads.store(true);
 }
 
 void *Barbeiro::run(void *arg)
 {
-    // Pegar objeto do barbeiro
+    // Pegar objeto do barbeiro dessa threads
     Barbeiro *b = (Barbeiro *)arg;
+    Cliente *c;
 
-    while (true)
+    while (!terminate_barbeiros_threads.load())
     {
-        // Ver se chegou cliente
-        pthread_mutex_lock(b->getChegouClienteMutex());
-        std::cout << "Barbeiro " << b->getTid() << " foi avisado que chegou cliente." << std::endl;
+        // Verificar fila de clientes
+        pthread_mutex_lock(b->getFilaClientesMutex());
+        if (b->clientes_antender->isEmpty())
+        {
+            pthread_cond_wait(&b->cond_tem_cliente, b->getFilaClientesMutex());
+
+            // Depois do sinal, pegar elemento da fila
+            c = b->clientes_antender->pop();
+        }
+        else
+        {
+            c = b->clientes_antender->pop();
+        }
+        pthread_mutex_unlock(b->getFilaClientesMutex());
+
+        
 
         // Pegar tesoura e pente
-        // ....
-        sleep(2);
-        std::cout << "Barbeiro " << b->getTid() << " pegou tesoura e pente." << std::endl;
+        Ferramentas *f = b->gerenciador_ferramentas->getFerramenta();
 
-        // Liberar mutex para atender o cliente
-        pthread_mutex_unlock(b->getLiberaClienteMutex());
+        // Liberar semáforo do cliente
+        sem_post(c->getSemCliente());
+
+        f->usarPente();
+        f->usarTesoura();
 
         // atendendo cliente
-        pthread_join(b->getTidCliente(), NULL);
+        // std::cout << "Esperando thread " << c->getTid() << " terminar" << std::endl;
+        pthread_join(c->getTid(), NULL);
 
         // Liberar tesoura e pente
-        // ...
-        std::cout << "Barbeiro " << b->getTid() << " está liberando tesoura e pente." << std::endl;
+        b->gerenciador_ferramentas->releaseFerramenta(&f);
 
-        // Barbeiro está livre
-        pthread_mutex_lock(b->getChegouClienteMutex());
-        pthread_mutex_lock(b->getLiberaClienteMutex());
-
-        std::cout << "Barbeiro " << b->getTid() << " terminou atendimento." << std::endl;
+        std::cout << "Barbeiro " << b->getTid() << " atendeu cliente " << c->getTid() << std::endl;
     }
+
+    // Saindo da thread
+    pthread_exit(NULL);
 }

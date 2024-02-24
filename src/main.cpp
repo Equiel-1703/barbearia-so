@@ -5,23 +5,27 @@
 #include "Cliente.h"
 #include "Barbeiro.h"
 #include "LinkedList.h"
+#include "GerenciadorFerramentas.h"
 
-#define N_CLIENTES 1
-#define N_BARBEIROS 1
+#define N_CLIENTES 5
+#define N_BARBEIROS 2
 
 int clientes_atendidos = 0;
 int clientes_desistiram = 0;
-int cadeiras_livres = N_BARBEIROS;
+int cadeiras_livres = 5;
 
 int main(void)
 {
-    LinkedList<Cliente *> clientes;
+    LinkedList<Cliente *> *fila_clientes = new LinkedList<Cliente *>();
+    GerenciadorFerramentas *gerenciador_ferramentas = new GerenciadorFerramentas(N_BARBEIROS / 2);
+
+    // Lista de barbeiros
     LinkedList<Barbeiro *> barbeiros;
 
     // Criando barbeiros
     for (int i = 0; i < N_BARBEIROS; i++)
     {
-        Barbeiro *b = new Barbeiro();
+        Barbeiro *b = new Barbeiro(fila_clientes, gerenciador_ferramentas);
         barbeiros.push_back(b);
     }
 
@@ -32,46 +36,44 @@ int main(void)
 
         if (cadeiras_livres > 0)
         {
-            std::cout << "Cliente chegou e sentou na cadeira " << i << std::endl;
-
-            clientes.push_back(c);
+            fila_clientes->push_back(c);
             cadeiras_livres--;
 
-            std::cout << "Cadeiras livres: " << cadeiras_livres << std::endl;
+            // Travar mutex da fila de clientes
+            pthread_mutex_lock(Barbeiro::getFilaClientesMutex());
+            
+            // Sinalizar que chegou cliente
+            pthread_cond_signal(Barbeiro::getCondTemCliente());
 
-            // Pega o barbeiro da frente da lista
-            Barbeiro *b = barbeiros.pop();
+            // Destravar mutex da fila de clientes
+            pthread_mutex_unlock(Barbeiro::getFilaClientesMutex());
 
-            // Coloca o cliente para o barbeiro atender e inicia thread do cliente
-            b->setTidCliente(c->getTid());
-            c->iniciar(b);
+            std::cout << "Cliente " << c->getTid() <<" chegou e sentou na cadeira " << i + 1 << std::endl;
 
-            std::cout << "Barbeiro " << b->getTid() << " atendendo cliente " << c->getTid() << std::endl;
-            // Libera o barbeiro para atender o cliente
-            pthread_mutex_unlock(b->getChegouClienteMutex());
-
-            // Remove o barbeiro da frente da lista e coloca no fim
-            barbeiros.push_back(b);
-            std::cout << "Barbeiro foi pro fim da lista" << std::endl;
         }
         else
             delete c;
     }
 
     // Esperar threads dos clientes terminarem
-    for (int i = 0; i < N_CLIENTES; i++)
+    while (!fila_clientes->isEmpty())
     {
-        Cliente *c = clientes.pop();
+        Cliente *c = fila_clientes->front();
         pthread_join(c->getTid(), NULL);
-        delete c;
     }
 
-    // Encerrar threads dos barbeiros
-    for (int i = 0; i < N_BARBEIROS; i++)
+    // Esperar threads dos barbeiros terminarem
+    Barbeiro::terminateBarbeirosThreads();
+
+    // Deletar objetos dos barbeiros
+    while (!barbeiros.isEmpty())
     {
         Barbeiro *b = barbeiros.pop();
+        // pthread_join(b->getTid(), NULL);
         delete b;
     }
+
+    delete gerenciador_ferramentas;
 
     return 0;
 }

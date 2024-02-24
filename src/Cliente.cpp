@@ -2,12 +2,23 @@
 
 Cliente::Cliente()
 {
+    // Inicializar semáforo
+    sem_init(&this->sem_cliente, 0, 1);
+
+    // Esperar barbeiro liberar
+    sem_wait(&this->sem_cliente);
+
+    // Inicializa thread
+    pthread_create(&this->tid, NULL, run, (void *)this);
 }
 
 Cliente::~Cliente()
 {
+    // Destroy semáforo
+    sem_destroy(&this->sem_cliente);
+
     // Destroy thread
-    pthread_cancel(NULL);
+    pthread_cancel(this->tid);
 }
 
 // Get tid
@@ -16,30 +27,24 @@ pthread_t Cliente::getTid() const
     return this->tid;
 }
 
-// Iniciar thread
-void Cliente::iniciar(Barbeiro *b)
+// Get sem_cliente
+sem_t *Cliente::getSemCliente()
 {
-    // Create thread
-    pthread_create(&this->tid, NULL, run, (void *)b);
+    return &this->sem_cliente;
 }
 
-void* Cliente::run(void *arg)
+
+void *Cliente::run(void *arg)
 {
-    while (true)
-    {
-        // Pegar mutex do barbeiro
-        pthread_mutex_t *mutex = ((Barbeiro *)arg)->getLiberaClienteMutex();
-        // Só vai liberar quando o barbeiro permitir
-        pthread_mutex_lock(mutex);
+    Cliente *c = (Cliente *)arg;
 
-        std::cout << "Cliente cortando o cabelo..." << std::endl;
-        sleep(2);
-        std::cout << "Cliente terminou de cortar o cabelo." << std::endl;
+    // Espera semáforo ser liberado pelo barbeiro
+    sem_wait(c->getSemCliente());
+    std::cout << "Cliente " << c->getTid() << " cortando cabelo" << std::endl;
 
-        // Liberar mutex do barbeiro
-        pthread_mutex_unlock(mutex);
+    // Dorme por um tempo
+    sleep(2);
 
-        // Cliente vai embora
-        pthread_exit(NULL);
-    }
+    // Termina thread
+    pthread_exit(NULL);
 }
