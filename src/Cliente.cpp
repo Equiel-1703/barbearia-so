@@ -1,4 +1,6 @@
 #include "Cliente.h"
+#include <cstdlib>
+#include <ctime>
 
 Cliente::Cliente()
 {
@@ -30,7 +32,6 @@ sem_t *Cliente::getSemCliente()
     return &this->sem_cliente;
 }
 
-
 void *Cliente::run(void *arg)
 {
     Cliente *c = (Cliente *)arg;
@@ -39,8 +40,11 @@ void *Cliente::run(void *arg)
     sem_wait(c->getSemCliente());
     std::cout << "Cliente " << c->getTid() << " cortando cabelo" << std::endl;
 
-    // Dorme por um tempo
-    sleep(2);
+    // Gera um número aleatório entre 3 e 6 segundos
+    int tempoCorte = (rand() % 4) + 3;
+
+    // Dorme por um tempo aleatório
+    sleep(tempoCorte);
 
     return NULL;
 }
