@@ -106,7 +106,9 @@ void *Barbeiro::run(void *arg)
 
         std::cout << b->barbeiros_finalizados.load() << std::endl;
         fflush(stdout);
-        
+
+        delete c;
+
         if (b->barbeiros_finalizados.load() == b->N_BARBEIROS)
         {
             std::cout << "Todos barbeiros terminaram" << std::endl;

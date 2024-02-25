@@ -7,7 +7,7 @@
 #include "LinkedList.h"
 #include "GerenciadorFerramentas.h"
 
-#define N_CLIENTES 5
+#define N_CLIENTES 7
 #define N_BARBEIROS 2
 
 int clientes_atendidos = 0;

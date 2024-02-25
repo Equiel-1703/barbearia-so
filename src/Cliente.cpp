@@ -16,9 +16,6 @@ Cliente::~Cliente()
 {
     // Destroy semáforo
     sem_destroy(&this->sem_cliente);
-
-    // Destroy thread
-    pthread_cancel(this->tid);
 }
 
 // Get tid
