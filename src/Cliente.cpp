@@ -45,6 +45,5 @@ void *Cliente::run(void *arg)
     // Dorme por um tempo
     sleep(2);
 
-    // Termina thread
-    pthread_exit(NULL);
+    return NULL;
 }

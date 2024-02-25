@@ -12,7 +12,7 @@
 
 int clientes_atendidos = 0;
 int clientes_desistiram = 0;
-int cadeiras_livres = 5;
+int cadeiras_livres = N_CLIENTES - 2;
 
 int main(void)
 {
@@ -25,7 +25,7 @@ int main(void)
     // Criando barbeiros
     for (int i = 0; i < N_BARBEIROS; i++)
     {
-        Barbeiro *b = new Barbeiro(fila_clientes, gerenciador_ferramentas);
+        Barbeiro *b = new Barbeiro(fila_clientes, gerenciador_ferramentas, N_BARBEIROS);
         barbeiros.push_back(b);
     }
 
@@ -36,11 +36,11 @@ int main(void)
 
         if (cadeiras_livres > 0)
         {
-            fila_clientes->push_back(c);
-            cadeiras_livres--;
-
             // Travar mutex da fila de clientes
             pthread_mutex_lock(Barbeiro::getFilaClientesMutex());
+            
+            fila_clientes->push_back(c);
+            cadeiras_livres--;   
             
             // Sinalizar que chegou cliente
             pthread_cond_signal(Barbeiro::getCondTemCliente());
@@ -55,21 +55,20 @@ int main(void)
             delete c;
     }
 
-    // Esperar threads dos clientes terminarem
-    while (!fila_clientes->isEmpty())
-    {
-        Cliente *c = fila_clientes->front();
-        pthread_join(c->getTid(), NULL);
-    }
-
     // Esperar threads dos barbeiros terminarem
-    Barbeiro::terminateBarbeirosThreads();
+    pthread_mutex_t *mutex_terminar_barbeiros = Barbeiro::getTerminarBarbeirosMutex();
+    pthread_cond_t *cond_terminar_barbeiros = Barbeiro::getCondTerminarBarbeiros();
+
+    pthread_mutex_lock(mutex_terminar_barbeiros);
+    std::cout << "Esperando sinal" << std::endl;
+    fflush(stdout);
+    pthread_cond_wait(cond_terminar_barbeiros, mutex_terminar_barbeiros);
+    pthread_mutex_unlock(mutex_terminar_barbeiros);
 
     // Deletar objetos dos barbeiros
     while (!barbeiros.isEmpty())
     {
         Barbeiro *b = barbeiros.pop();
-        // pthread_join(b->getTid(), NULL);
         delete b;
     }
 
