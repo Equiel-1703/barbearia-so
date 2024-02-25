@@ -41,10 +41,10 @@ void *Cliente::run(void *arg)
     std::cout << "Cliente " << c->getTid() << " cortando cabelo" << std::endl;
 
     // Gera um número aleatório entre 3 e 6 segundos
-    int tempoCorte = (rand() % 4) + 3;
+    int tempo_corte = (rand() % 4) + 3;
 
     // Dorme por um tempo aleatório
-    sleep(tempoCorte);
+    sleep(tempo_corte);
 
     return NULL;
 }

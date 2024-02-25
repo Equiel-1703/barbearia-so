@@ -38,21 +38,29 @@ int main(void)
         {
             // Travar mutex da fila de clientes
             pthread_mutex_lock(Barbeiro::getFilaClientesMutex());
-            
+
             fila_clientes->push_back(c);
-            cadeiras_livres--;   
-            
+            cadeiras_livres--;
+
             // Sinalizar que chegou cliente
             pthread_cond_signal(Barbeiro::getCondTemCliente());
 
             // Destravar mutex da fila de clientes
             pthread_mutex_unlock(Barbeiro::getFilaClientesMutex());
 
-            std::cout << "Cliente " << c->getTid() <<" chegou e sentou na cadeira " << i + 1 << std::endl;
+            std::cout << "Cliente " << c->getTid() << " chegou e sentou na cadeira " << i + 1 << std::endl;
 
+            // Clientes atendidos
+            clientes_atendidos++;
         }
         else
+        {
+
+            // Clientes que desistiram
+            clientes_desistiram++;
+
             delete c;
+        }
     }
 
     // Esperar threads dos barbeiros terminarem
@@ -73,6 +81,10 @@ int main(void)
     }
 
     delete gerenciador_ferramentas;
+
+    // Exibir o número de clientes atendidos e desistentes
+    std::cout << "Clientes atendidos: " << clientes_atendidos << std::endl;
+    std::cout << "Clientes que desistiram: " << clientes_desistiram << std::endl;
 
     return 0;
 }
