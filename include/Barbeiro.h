@@ -9,6 +9,7 @@
 #include "GerenciadorFerramentas.h"
 #include "Ferramentas.h"
 #include "Cliente.h"
+#include "ConsoleWriter.h"
 
 // Forward declaration of Cliente
 class Cliente;
@@ -26,13 +27,16 @@ private:
     GerenciadorFerramentas *gerenciador_ferramentas;
     LinkedList<Cliente *> *clientes_antender;
 
+    ConsoleWriter *console_writer;
+    std::string message;
+
     // Contador de barbeiros que terminaram atendimento
     static std::atomic<int> barbeiros_finalizados;
 
 public:
     const int N_BARBEIROS;
 
-    Barbeiro(LinkedList<Cliente *> *clientes_antender, GerenciadorFerramentas *gerenciador_ferramentas, int N_BARBEIROS);
+    Barbeiro(LinkedList<Cliente *> *clientes_antender, GerenciadorFerramentas *gerenciador_ferramentas, ConsoleWriter *cw, int N_BARBEIROS);
     ~Barbeiro();
 
     // Get mutex_fila_clientes

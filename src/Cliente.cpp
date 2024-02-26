@@ -1,14 +1,15 @@
 #include "Cliente.h"
-#include <cstdlib>
-#include <ctime>
 
-Cliente::Cliente()
+Cliente::Cliente(int tempo_corte, ConsoleWriter *cw): tempo_corte(tempo_corte)
 {
     // Inicializar semáforo
     sem_init(&this->sem_cliente, 0, 1);
 
     // Esperar barbeiro liberar
     sem_wait(&this->sem_cliente);
+
+    // Inicializar console_writer
+    this->console_writer = cw;
 
     // Inicializa thread
     pthread_create(&this->tid, NULL, run, (void *)this);
@@ -38,13 +39,12 @@ void *Cliente::run(void *arg)
 
     // Espera semáforo ser liberado pelo barbeiro
     sem_wait(c->getSemCliente());
-    std::cout << "Cliente " << c->getTid() << " cortando cabelo" << std::endl;
-
-    // Gera um número aleatório entre 3 e 6 segundos
-    int tempo_corte = (rand() % 4) + 3;
+    
+    c->message = "Cliente " + std::to_string(c->getTid()) + " cortará o cabelo por " + std::to_string(c->tempo_corte) + " segundos\n";
+    c->console_writer->writeToConsole(c->message);
 
     // Dorme por um tempo aleatório
-    sleep(tempo_corte);
+    sleep(c->tempo_corte);
 
     return NULL;
 }

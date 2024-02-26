@@ -9,12 +9,14 @@ pthread_cond_t Barbeiro::cond_terminar_barbeiros = PTHREAD_COND_INITIALIZER;
 
 std::atomic<int> Barbeiro::barbeiros_finalizados(0);
 
-Barbeiro::Barbeiro(LinkedList<Cliente *> *clientes_antender, GerenciadorFerramentas *gerenciador_ferramentas, int N_BARBEIROS)
+Barbeiro::Barbeiro(LinkedList<Cliente *> *clientes_antender, GerenciadorFerramentas *gerenciador_ferramentas, ConsoleWriter *cw, int N_BARBEIROS)
     : N_BARBEIROS(N_BARBEIROS)
 {
     this->clientes_antender = clientes_antender;
 
     this->gerenciador_ferramentas = gerenciador_ferramentas;
+    
+    this->console_writer = cw;
 
     // Iniciar thread
     pthread_create(&this->tid, NULL, run, (void *)this);
@@ -22,8 +24,6 @@ Barbeiro::Barbeiro(LinkedList<Cliente *> *clientes_antender, GerenciadorFerramen
 
 Barbeiro::~Barbeiro()
 {
-    // Destroy mutex da fila
-    pthread_mutex_destroy(&this->mutex_fila_clientes);
 }
 
 pthread_t Barbeiro::getTid() const
@@ -94,25 +94,27 @@ void *Barbeiro::run(void *arg)
         f->usarTesoura();
 
         // atendendo cliente
-        std::cout << "Esperando thread " << c->getTid() << " terminar" << std::endl;
+        b->message = "Barbeiro " + std::to_string(b->getTid()) + " atendendo cliente " + std::to_string(c->getTid()) + "\n";
+        b->console_writer->writeToConsole(b->message);
         pthread_join(c->getTid(), NULL);
 
         // Liberar tesoura e pente
         b->gerenciador_ferramentas->releaseFerramenta(&f);
 
-        std::cout << "Barbeiro " << b->getTid() << " atendeu cliente " << c->getTid() << std::endl;
+        b->message = "Barbeiro " + std::to_string(b->getTid()) + " terminou de atender cliente " + std::to_string(c->getTid()) + "\n";
+        b->console_writer->writeToConsole(b->message);
 
         b->barbeiros_finalizados++;
 
-        std::cout << b->barbeiros_finalizados.load() << std::endl;
-        fflush(stdout);
+        b->message = std::to_string(b->barbeiros_finalizados.load()) + "\n";
+        b->console_writer->writeToConsole(b->message);
 
+        // Deleta objeto do cliente
         delete c;
 
         if (b->barbeiros_finalizados.load() == b->N_BARBEIROS)
         {
-            std::cout << "Todos barbeiros terminaram" << std::endl;
-            fflush(stdout);
+            b->console_writer->writeToConsole("Todos barbeiros terminaram\n");
             pthread_mutex_lock(b->getTerminarBarbeirosMutex());
             pthread_cond_signal(b->getCondTerminarBarbeiros());
             pthread_mutex_unlock(b->getTerminarBarbeirosMutex());
