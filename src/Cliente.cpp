@@ -27,6 +27,12 @@ pthread_t Cliente::getTid() const
     return this->tid;
 }
 
+// Get Id
+int Cliente::getId() const
+{
+    return this->tid % 10'000;
+}
+
 // Get sem_cliente
 sem_t *Cliente::getSemCliente()
 {
@@ -40,7 +46,7 @@ void *Cliente::run(void *arg)
     // Espera semáforo ser liberado pelo barbeiro
     sem_wait(c->getSemCliente());
     
-    c->message = "Cliente " + std::to_string(c->getTid()) + " cortará o cabelo por " + std::to_string(c->tempo_corte) + " segundos\n";
+    c->message = "Cliente " + std::to_string(c->getId()) + " cortará o cabelo por " + std::to_string(c->tempo_corte) + " segundos\n";
     c->console_writer->writeToConsole(c->message);
 
     // Dorme por um tempo aleatório

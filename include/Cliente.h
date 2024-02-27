@@ -33,6 +33,9 @@ public:
     // Get tid
     pthread_t getTid() const;
 
+    // Get Id
+    int getId() const;
+
     // Get sem_cliente
     sem_t *getSemCliente();
 };

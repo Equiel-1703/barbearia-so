@@ -20,9 +20,13 @@ private:
     pthread_t tid;
 
     static pthread_mutex_t mutex_fila_clientes;
-    static pthread_mutex_t mutex_terminar_barbeiros;
     static pthread_cond_t cond_tem_cliente;
+
+    static pthread_mutex_t mutex_terminar_barbeiros;
     static pthread_cond_t cond_terminar_barbeiros;
+
+    // Booleans que controlam o término de execução das threads dos barbeiros
+    static std::atomic<bool> flag_barbeiros_sinalizaram_termino;
 
     GerenciadorFerramentas *gerenciador_ferramentas;
     LinkedList<Cliente *> *clientes_antender;
@@ -34,9 +38,10 @@ private:
     static std::atomic<int> barbeiros_finalizados;
 
 public:
-    const int N_BARBEIROS;
+    static const int N_BARBEIROS;
+    static sem_t sem_terminar_barbeiros;
 
-    Barbeiro(LinkedList<Cliente *> *clientes_antender, GerenciadorFerramentas *gerenciador_ferramentas, ConsoleWriter *cw, int N_BARBEIROS);
+    Barbeiro(LinkedList<Cliente *> *clientes_antender, GerenciadorFerramentas *gerenciador_ferramentas, ConsoleWriter *cw);
     ~Barbeiro();
 
     // Get mutex_fila_clientes
@@ -53,6 +58,12 @@ public:
 
     // Get tid
     pthread_t getTid() const;
+
+    // Get ID
+    int getId() const;
+
+    // Get boolean de sinalização de término dos barbeiros
+    static bool getFlagBarbeirosSinalizaramTermino();
 
     // Run function
     static void *run(void *arg);

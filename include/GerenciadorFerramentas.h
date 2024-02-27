@@ -6,15 +6,18 @@
 
 #include "Ferramentas.h"
 #include "LinkedList.h"
+#include "ConsoleWriter.h"
 
 class GerenciadorFerramentas
 {
 private:
     sem_t semaforo;
-    LinkedList<Ferramentas *> ferramentas;
     const int numFerramentas;
+    LinkedList<Ferramentas *> ferramentas;
+
+    ConsoleWriter *console_writer;
 public:
-    GerenciadorFerramentas(const int numFerramentas);
+    GerenciadorFerramentas(const int numFerramentas, ConsoleWriter *console_writer);
     ~GerenciadorFerramentas();
 
     // Get ferramenta
